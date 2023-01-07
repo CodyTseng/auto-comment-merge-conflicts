@@ -1,11 +1,25 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Auto Comment Merge Conflict'
+description: 'Github Action to automatically add comments to alert developers when there are merge conflicts'
+author: 'CodyTseng'
+branding:
+  icon: 'git-merge'
+  color: 'red'
 inputs:
-  milliseconds: # change this
+  token:
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    description: 'GitHub token'
+  comment-body:
+    required: false
+    description: 'Comment body'
+    default: 'Merge Conflict'
+  wait-ms:
+    required: false
+    description: 'Milliseconds between retries'
+    default: 3000
+  max-retries:
+    required: false
+    description: 'The number of retries when a PR mergeable status is unknown'
+    default: 5
 runs:
   using: 'node16'
   main: 'dist/index.js'
