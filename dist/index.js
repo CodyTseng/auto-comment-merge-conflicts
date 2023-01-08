@@ -46,7 +46,7 @@ function addMergeConflictCommentIfNeed(octokit, pr, commentBody) {
         const mergeConflictComment = pr.comments.nodes.find((comment) => comment.body === commentBody);
         if (mergeConflictComment)
             return;
-        const query = `mutation ($subjectId: String!, $body: String!) {
+        const query = `mutation ($subjectId: ID!, $body: String!) {
     addComment(input: {
       subjectId: $subjectId
       body: $body
@@ -72,7 +72,7 @@ function deleteMergeConflictCommentIfNeed(octokit, pr, commentBody) {
         const mergeConflictComment = pr.comments.nodes.find((comment) => comment.body === commentBody);
         if (!mergeConflictComment)
             return;
-        const query = `mutation ($id: String!) {
+        const query = `mutation ($id: ID!) {
     deleteIssueComment(input: {
       id: $id
     }) {
