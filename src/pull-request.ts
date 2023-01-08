@@ -1,4 +1,3 @@
-import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
 import { MergeableState } from './enum';
 import { GitHub, PullRequest, RepositoryPullRequests } from './interface';
@@ -13,14 +12,13 @@ export async function getAllUnlockedPRs(octokit: GitHub, context: Context) {
     const repoPRs = await getRepositoryPullRequests(octokit, context, cursor);
 
     if (!repoPRs || !repoPRs.repository) {
-      core.setFailed(`Failed to get PR list: ${JSON.stringify(repoPRs)}`);
-      return [];
+      throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
     }
 
     for (const pr of repoPRs.repository.pullRequests.nodes) {
       if (pr.mergeable === MergeableState.Unknown) {
         throw new Error(
-          'There is a pull request with unknown mergeable status',
+          'There is a pull request with unknown mergeable status.',
         );
       }
       if (!pr.locked) {
@@ -65,13 +63,9 @@ async function getRepositoryPullRequests(
       }
     }`;
 
-  try {
-    return octokit.graphql<RepositoryPullRequests>(query, {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      after: cursor,
-    });
-  } catch (err) {
-    core.setFailed(err as Error);
-  }
+  return octokit.graphql<RepositoryPullRequests>(query, {
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    after: cursor,
+  });
 }

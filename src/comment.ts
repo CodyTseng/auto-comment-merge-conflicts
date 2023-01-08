@@ -21,16 +21,12 @@ export async function addMergeConflictCommentIfNeed(
     }
   }`;
 
-  try {
-    await octokit.graphql(query, {
-      subjectId: pr.id,
-      body: commentBody,
-    });
-  } catch (err) {
-    core.setFailed(err as Error);
-  }
+  await octokit.graphql(query, {
+    subjectId: pr.id,
+    body: commentBody,
+  });
 
-  core.info(`Added a conflict comment to PR #${pr.number}`);
+  core.info(`Added a merge conflict comment to #${pr.number} PR.`);
 }
 
 export async function deleteMergeConflictCommentIfNeed(
@@ -52,13 +48,9 @@ export async function deleteMergeConflictCommentIfNeed(
     }
   }`;
 
-  try {
-    await octokit.graphql(query, {
-      id: mergeConflictComment.id,
-    });
-  } catch (err) {
-    core.setFailed(err as Error);
-  }
+  await octokit.graphql(query, {
+    id: mergeConflictComment.id,
+  });
 
-  core.info(`Deleted a conflict comment from PR #${pr.number}`);
+  core.info(`Deleted a conflict comment from #${pr.number} PR.`);
 }

@@ -54,16 +54,11 @@ function addMergeConflictCommentIfNeed(octokit, pr, commentBody) {
       clientMutationId
     }
   }`;
-        try {
-            yield octokit.graphql(query, {
-                subjectId: pr.id,
-                body: commentBody,
-            });
-        }
-        catch (err) {
-            core.setFailed(err);
-        }
-        core.info(`Added a conflict comment to PR #${pr.number}`);
+        yield octokit.graphql(query, {
+            subjectId: pr.id,
+            body: commentBody,
+        });
+        core.info(`Added a merge conflict comment to #${pr.number} PR.`);
     });
 }
 exports.addMergeConflictCommentIfNeed = addMergeConflictCommentIfNeed;
@@ -79,15 +74,10 @@ function deleteMergeConflictCommentIfNeed(octokit, pr, commentBody) {
       clientMutationId
     }
   }`;
-        try {
-            yield octokit.graphql(query, {
-                id: mergeConflictComment.id,
-            });
-        }
-        catch (err) {
-            core.setFailed(err);
-        }
-        core.info(`Deleted a conflict comment from PR #${pr.number}`);
+        yield octokit.graphql(query, {
+            id: mergeConflictComment.id,
+        });
+        core.info(`Deleted a conflict comment from #${pr.number} PR.`);
     });
 }
 exports.deleteMergeConflictCommentIfNeed = deleteMergeConflictCommentIfNeed;
@@ -151,33 +141,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
-const comment_1 = __nccwpck_require__(1667);
-const enum_1 = __nccwpck_require__(2210);
-const pull_request_1 = __nccwpck_require__(1843);
-const utils_1 = __nccwpck_require__(918);
-function run() {
+const run_1 = __nccwpck_require__(7884);
+function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const token = core.getInput('token', {
-            required: true,
-        });
-        const waitMS = parseInt(core.getInput('wait-ms'));
-        const maxRetries = parseInt(core.getInput('max-retries'));
-        const commentBody = core.getInput('comment-body');
-        core.debug(`waitMS=${waitMS}; maxRetries=${maxRetries}; commentBody=${commentBody}`);
-        const octokit = github.getOctokit(token);
-        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return (0, pull_request_1.getAllUnlockedPRs)(octokit, github.context); }), waitMS, maxRetries);
-        yield Promise.all(prs.map((pr) => updateMergeConflictComment(octokit, pr, commentBody)));
+        try {
+            yield (0, run_1.run)();
+        }
+        catch (err) {
+            core.setFailed(err);
+        }
     });
 }
-function updateMergeConflictComment(octokit, pr, commentBody) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return pr.mergeable === enum_1.MergeableState.Conflicting
-            ? (0, comment_1.addMergeConflictCommentIfNeed)(octokit, pr, commentBody)
-            : (0, comment_1.deleteMergeConflictCommentIfNeed)(octokit, pr, commentBody);
-    });
-}
-run();
+main();
 
 
 /***/ }),
@@ -187,29 +162,6 @@ run();
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -221,7 +173,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAllUnlockedPRs = void 0;
-const core = __importStar(__nccwpck_require__(2186));
 const enum_1 = __nccwpck_require__(2210);
 function getAllUnlockedPRs(octokit, context) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -231,12 +182,11 @@ function getAllUnlockedPRs(octokit, context) {
         while (hasNextPage) {
             const repoPRs = yield getRepositoryPullRequests(octokit, context, cursor);
             if (!repoPRs || !repoPRs.repository) {
-                core.setFailed(`Failed to get PR list: ${JSON.stringify(repoPRs)}`);
-                return [];
+                throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
             }
             for (const pr of repoPRs.repository.pullRequests.nodes) {
                 if (pr.mergeable === enum_1.MergeableState.Unknown) {
-                    throw new Error('There is a pull request with unknown mergeable status');
+                    throw new Error('There is a pull request with unknown mergeable status.');
                 }
                 if (!pr.locked) {
                     unlockedPRs.push(pr);
@@ -275,16 +225,83 @@ function getRepositoryPullRequests(octokit, context, cursor) {
         }
       }
     }`;
-        try {
-            return octokit.graphql(query, {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                after: cursor,
-            });
-        }
-        catch (err) {
-            core.setFailed(err);
-        }
+        return octokit.graphql(query, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            after: cursor,
+        });
+    });
+}
+
+
+/***/ }),
+
+/***/ 7884:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github = __importStar(__nccwpck_require__(5438));
+const comment_1 = __nccwpck_require__(1667);
+const enum_1 = __nccwpck_require__(2210);
+const pull_request_1 = __nccwpck_require__(1843);
+const utils_1 = __nccwpck_require__(918);
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const token = core.getInput('token', {
+            required: true,
+        });
+        const waitMS = parseInt(core.getInput('wait-ms'));
+        const maxRetries = parseInt(core.getInput('max-retries'));
+        const commentBody = core.getInput('comment-body');
+        core.debug(`waitMS=${waitMS}; maxRetries=${maxRetries}; commentBody=${commentBody}`);
+        const octokit = github.getOctokit(token);
+        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return (0, pull_request_1.getAllUnlockedPRs)(octokit, github.context); }), waitMS, maxRetries);
+        core.info(`Found ${prs.length} unlocked PRs.`);
+        yield Promise.all(prs.map((pr) => updateMergeConflictComment(octokit, pr, commentBody)));
+    });
+}
+exports.run = run;
+function updateMergeConflictComment(octokit, pr, commentBody) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return pr.mergeable === enum_1.MergeableState.Conflicting
+            ? (0, comment_1.addMergeConflictCommentIfNeed)(octokit, pr, commentBody)
+            : (0, comment_1.deleteMergeConflictCommentIfNeed)(octokit, pr, commentBody);
     });
 }
 
@@ -337,9 +354,9 @@ function retry(fn, waitMS, maxRetries) {
             return yield fn();
         }
         catch (err) {
-            if (maxRetries === 0)
-                core.setFailed(err);
-            core.info(err.message + `wait ${waitMS} ms and try again...`);
+            if (maxRetries <= 0)
+                throw err;
+            core.info(err.message + ` wait ${waitMS} ms and try again...`);
             yield wait(waitMS);
             return retry(fn, waitMS, maxRetries - 1);
         }
