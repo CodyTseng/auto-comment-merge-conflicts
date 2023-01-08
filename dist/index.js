@@ -2,10 +2,33 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
 /***/ 1667:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -16,9 +39,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.addMergeConflictComment = void 0;
-function addMergeConflictComment(octokit, prId, commentBody) {
+exports.deleteMergeConflictCommentIfNeed = exports.addMergeConflictCommentIfNeed = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+function addMergeConflictCommentIfNeed(octokit, pr, commentBody) {
     return __awaiter(this, void 0, void 0, function* () {
+        const mergeConflictComment = pr.comments.nodes.find((comment) => comment.body === commentBody);
+        if (mergeConflictComment)
+            return;
         const query = `mutation ($subjectId: String!, $body: String!) {
     addComment(input: {
       subjectId: $subjectId
@@ -27,13 +54,43 @@ function addMergeConflictComment(octokit, prId, commentBody) {
       clientMutationId
     }
   }`;
-        return octokit.graphql(query, {
-            subjectId: prId,
-            body: commentBody,
-        });
+        try {
+            yield octokit.graphql(query, {
+                subjectId: pr.id,
+                body: commentBody,
+            });
+        }
+        catch (err) {
+            core.setFailed(err);
+        }
+        core.info(`Added a conflict comment to PR #${pr.number}`);
     });
 }
-exports.addMergeConflictComment = addMergeConflictComment;
+exports.addMergeConflictCommentIfNeed = addMergeConflictCommentIfNeed;
+function deleteMergeConflictCommentIfNeed(octokit, pr, commentBody) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const mergeConflictComment = pr.comments.nodes.find((comment) => comment.body === commentBody);
+        if (!mergeConflictComment)
+            return;
+        const query = `mutation ($id: String!) {
+    deleteIssueComment(input: {
+      id: $id
+    }) {
+      clientMutationId
+    }
+  }`;
+        try {
+            yield octokit.graphql(query, {
+                id: mergeConflictComment.id,
+            });
+        }
+        catch (err) {
+            core.setFailed(err);
+        }
+        core.info(`Deleted a conflict comment from PR #${pr.number}`);
+    });
+}
+exports.deleteMergeConflictCommentIfNeed = deleteMergeConflictCommentIfNeed;
 
 
 /***/ }),
@@ -96,6 +153,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const comment_1 = __nccwpck_require__(1667);
+const enum_1 = __nccwpck_require__(2210);
 const pull_request_1 = __nccwpck_require__(1843);
 const utils_1 = __nccwpck_require__(918);
 function run() {
@@ -108,11 +166,15 @@ function run() {
         const commentBody = core.getInput('comment-body');
         core.debug(`waitMS=${waitMS}; maxRetries=${maxRetries}; commentBody=${commentBody}`);
         const octokit = github.getOctokit(token);
-        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return (0, pull_request_1.getAllUnlockedConflictingPRs)(octokit, github.context); }), waitMS, maxRetries);
-        const needCommentPRs = prs.filter((0, pull_request_1.needComment)(commentBody));
-        if (needCommentPRs.length > 0) {
-            yield Promise.all(needCommentPRs.map((pr) => (0, comment_1.addMergeConflictComment)(octokit, pr.id, commentBody)));
-        }
+        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return (0, pull_request_1.getAllUnlockedPRs)(octokit, github.context); }), waitMS, maxRetries);
+        yield Promise.all(prs.map((pr) => updateMergeConflictComment(octokit, pr, commentBody)));
+    });
+}
+function updateMergeConflictComment(octokit, pr, commentBody) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return pr.mergeable === enum_1.MergeableState.Conflicting
+            ? (0, comment_1.addMergeConflictCommentIfNeed)(octokit, pr, commentBody)
+            : (0, comment_1.deleteMergeConflictCommentIfNeed)(octokit, pr, commentBody);
     });
 }
 run();
@@ -158,41 +220,35 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.needComment = exports.getAllUnlockedConflictingPRs = void 0;
+exports.getAllUnlockedPRs = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const enum_1 = __nccwpck_require__(2210);
-function getAllUnlockedConflictingPRs(octokit, context) {
+function getAllUnlockedPRs(octokit, context) {
     return __awaiter(this, void 0, void 0, function* () {
         let cursor;
         let hasNextPage = true;
-        const unlockedConflictingPRs = [];
+        const unlockedPRs = [];
         while (hasNextPage) {
-            let repoPRs;
-            try {
-                repoPRs = yield getRepositoryPullRequests(octokit, context, cursor);
-            }
-            catch (err) {
-                core.setFailed(`getRepositoryPullRequests failed: ${err}`);
-            }
+            const repoPRs = yield getRepositoryPullRequests(octokit, context, cursor);
             if (!repoPRs || !repoPRs.repository) {
-                core.setFailed(`getRepositoryPullRequests failed: ${JSON.stringify(repoPRs)}`);
+                core.setFailed(`Failed to get PR list: ${JSON.stringify(repoPRs)}`);
                 return [];
             }
             for (const pr of repoPRs.repository.pullRequests.nodes) {
                 if (pr.mergeable === enum_1.MergeableState.Unknown) {
                     throw new Error('There is a pull request with unknown mergeable status');
                 }
-                if (!pr.locked && pr.mergeable === enum_1.MergeableState.Conflicting) {
-                    unlockedConflictingPRs.push(pr);
+                if (!pr.locked) {
+                    unlockedPRs.push(pr);
                 }
             }
             cursor = repoPRs.repository.pullRequests.pageInfo.endCursor;
             hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
         }
-        return unlockedConflictingPRs;
+        return unlockedPRs;
     });
 }
-exports.getAllUnlockedConflictingPRs = getAllUnlockedConflictingPRs;
+exports.getAllUnlockedPRs = getAllUnlockedPRs;
 function getRepositoryPullRequests(octokit, context, cursor) {
     return __awaiter(this, void 0, void 0, function* () {
         const query = `query ($owner: String!, $repo: String!, $after: String) {
@@ -206,6 +262,7 @@ function getRepositoryPullRequests(octokit, context, cursor) {
             updatedAt
             comments(last: 100) {
               nodes {
+                id
                 body
                 createdAt
               }
@@ -218,32 +275,50 @@ function getRepositoryPullRequests(octokit, context, cursor) {
         }
       }
     }`;
-        return octokit.graphql(query, {
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            after: cursor,
-        });
+        try {
+            return octokit.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                after: cursor,
+            });
+        }
+        catch (err) {
+            core.setFailed(err);
+        }
     });
 }
-function needComment(commentBody) {
-    return (pr) => !pr.comments.nodes.some((comment) => {
-        if (comment.body !== commentBody)
-            return false;
-        const commentCreatedAt = Date.parse(comment.createdAt);
-        const prUpdatedAt = Date.parse(pr.updatedAt);
-        return commentCreatedAt >= prUpdatedAt;
-    });
-}
-exports.needComment = needComment;
 
 
 /***/ }),
 
 /***/ 918:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -255,6 +330,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.wait = exports.retry = void 0;
+const core = __importStar(__nccwpck_require__(2186));
 function retry(fn, waitMS, maxRetries) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -262,7 +338,8 @@ function retry(fn, waitMS, maxRetries) {
         }
         catch (err) {
             if (maxRetries === 0)
-                throw err;
+                core.setFailed(err);
+            core.info(err.message + `wait ${waitMS} ms and try again...`);
             yield wait(waitMS);
             return retry(fn, waitMS, maxRetries - 1);
         }

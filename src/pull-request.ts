@@ -1,29 +1,19 @@
 import * as core from '@actions/core';
 import { Context } from '@actions/github/lib/context';
 import { MergeableState } from './enum';
-import { GitHub, RepositoryPullRequests, PullRequest } from './interface';
+import { GitHub, PullRequest, RepositoryPullRequests } from './interface';
 
-export async function getAllUnlockedConflictingPRs(
-  octokit: GitHub,
-  context: Context,
-) {
+export async function getAllUnlockedPRs(octokit: GitHub, context: Context) {
   let cursor: string | undefined;
   let hasNextPage = true;
 
-  const unlockedConflictingPRs: PullRequest[] = [];
+  const unlockedPRs: PullRequest[] = [];
 
   while (hasNextPage) {
-    let repoPRs: RepositoryPullRequests | undefined;
-    try {
-      repoPRs = await getRepositoryPullRequests(octokit, context, cursor);
-    } catch (err) {
-      core.setFailed(`getRepositoryPullRequests failed: ${err}`);
-    }
+    const repoPRs = await getRepositoryPullRequests(octokit, context, cursor);
 
     if (!repoPRs || !repoPRs.repository) {
-      core.setFailed(
-        `getRepositoryPullRequests failed: ${JSON.stringify(repoPRs)}`,
-      );
+      core.setFailed(`Failed to get PR list: ${JSON.stringify(repoPRs)}`);
       return [];
     }
 
@@ -33,8 +23,8 @@ export async function getAllUnlockedConflictingPRs(
           'There is a pull request with unknown mergeable status',
         );
       }
-      if (!pr.locked && pr.mergeable === MergeableState.Conflicting) {
-        unlockedConflictingPRs.push(pr);
+      if (!pr.locked) {
+        unlockedPRs.push(pr);
       }
     }
 
@@ -42,7 +32,7 @@ export async function getAllUnlockedConflictingPRs(
     hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
   }
 
-  return unlockedConflictingPRs;
+  return unlockedPRs;
 }
 
 async function getRepositoryPullRequests(
@@ -61,6 +51,7 @@ async function getRepositoryPullRequests(
             updatedAt
             comments(last: 100) {
               nodes {
+                id
                 body
                 createdAt
               }
@@ -74,19 +65,13 @@ async function getRepositoryPullRequests(
       }
     }`;
 
-  return octokit.graphql<RepositoryPullRequests>(query, {
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    after: cursor,
-  });
-}
-
-export function needComment(commentBody: string) {
-  return (pr: PullRequest) =>
-    !pr.comments.nodes.some((comment) => {
-      if (comment.body !== commentBody) return false;
-      const commentCreatedAt = Date.parse(comment.createdAt);
-      const prUpdatedAt = Date.parse(pr.updatedAt);
-      return commentCreatedAt >= prUpdatedAt;
+  try {
+    return octokit.graphql<RepositoryPullRequests>(query, {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      after: cursor,
     });
+  } catch (err) {
+    core.setFailed(err as Error);
+  }
 }

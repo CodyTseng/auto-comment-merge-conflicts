@@ -1,3 +1,5 @@
+import * as core from '@actions/core';
+
 export async function retry<T>(
   fn: () => Promise<T>,
   waitMS: number,
@@ -6,7 +8,9 @@ export async function retry<T>(
   try {
     return await fn();
   } catch (err) {
-    if (maxRetries === 0) throw err;
+    if (maxRetries === 0) core.setFailed(err as Error);
+
+    core.info((err as Error).message + `wait ${waitMS} ms and try again...`);
     await wait(waitMS);
     return retry(fn, waitMS, maxRetries - 1);
   }

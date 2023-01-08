@@ -1,7 +1,12 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { addMergeConflictComment } from './comment';
-import { getAllUnlockedConflictingPRs, needComment } from './pull-request';
+import {
+  addMergeConflictCommentIfNeed,
+  deleteMergeConflictCommentIfNeed,
+} from './comment';
+import { MergeableState } from './enum';
+import { GitHub, PullRequest } from './interface';
+import { getAllUnlockedPRs } from './pull-request';
 import { retry } from './utils';
 
 async function run() {
@@ -19,20 +24,24 @@ async function run() {
   const octokit = github.getOctokit(token);
 
   const prs = await retry(
-    async () => getAllUnlockedConflictingPRs(octokit, github.context),
+    async () => getAllUnlockedPRs(octokit, github.context),
     waitMS,
     maxRetries,
   );
 
-  const needCommentPRs = prs.filter(needComment(commentBody));
+  await Promise.all(
+    prs.map((pr) => updateMergeConflictComment(octokit, pr, commentBody)),
+  );
+}
 
-  if (needCommentPRs.length > 0) {
-    await Promise.all(
-      needCommentPRs.map((pr) =>
-        addMergeConflictComment(octokit, pr.id, commentBody),
-      ),
-    );
-  }
+async function updateMergeConflictComment(
+  octokit: GitHub,
+  pr: PullRequest,
+  commentBody: string,
+) {
+  return pr.mergeable === MergeableState.Conflicting
+    ? addMergeConflictCommentIfNeed(octokit, pr, commentBody)
+    : deleteMergeConflictCommentIfNeed(octokit, pr, commentBody);
 }
 
 run();

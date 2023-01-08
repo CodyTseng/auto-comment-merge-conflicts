@@ -3,6 +3,7 @@ import * as github from '@actions/github';
 export type GitHub = ReturnType<typeof github.getOctokit>;
 
 export interface Comment {
+  id: string;
   body: string;
   createdAt: string;
 }
