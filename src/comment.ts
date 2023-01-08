@@ -12,7 +12,7 @@ export async function addMergeConflictCommentIfNeed(
 
   if (mergeConflictComment) return;
 
-  const query = `mutation ($subjectId: String!, $body: String!) {
+  const query = `mutation ($subjectId: ID!, $body: String!) {
     addComment(input: {
       subjectId: $subjectId
       body: $body
@@ -44,7 +44,7 @@ export async function deleteMergeConflictCommentIfNeed(
 
   if (!mergeConflictComment) return;
 
-  const query = `mutation ($id: String!) {
+  const query = `mutation ($id: ID!) {
     deleteIssueComment(input: {
       id: $id
     }) {
