@@ -39,48 +39,38 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.deleteMergeConflictCommentIfNeed = exports.addMergeConflictCommentIfNeed = void 0;
+exports.CommentService = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-function addMergeConflictCommentIfNeed(octokit, pr, commentBody) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const mergeConflictComment = pr.comments.nodes.find((comment) => comment.body === commentBody);
-        if (mergeConflictComment)
-            return;
-        const query = `mutation ($subjectId: ID!, $body: String!) {
-    addComment(input: {
-      subjectId: $subjectId
-      body: $body
-    }) {
-      clientMutationId
+class CommentService {
+    constructor(queryService, commentBody) {
+        this.queryService = queryService;
+        this.commentBody = commentBody;
     }
-  }`;
-        yield octokit.graphql(query, {
-            subjectId: pr.id,
-            body: commentBody,
+    addMergeConflictCommentIfNeed(pr) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const mergeConflictComment = this.findMergeConflictComment(pr);
+            if (mergeConflictComment)
+                return false;
+            yield this.queryService.addComment(pr.id, this.commentBody);
+            core.info(`Added a merge conflict comment to #${pr.number} PR.`);
+            return true;
         });
-        core.info(`Added a merge conflict comment to #${pr.number} PR.`);
-    });
-}
-exports.addMergeConflictCommentIfNeed = addMergeConflictCommentIfNeed;
-function deleteMergeConflictCommentIfNeed(octokit, pr, commentBody) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const mergeConflictComment = pr.comments.nodes.find((comment) => comment.body === commentBody);
-        if (!mergeConflictComment)
-            return;
-        const query = `mutation ($id: ID!) {
-    deleteIssueComment(input: {
-      id: $id
-    }) {
-      clientMutationId
     }
-  }`;
-        yield octokit.graphql(query, {
-            id: mergeConflictComment.id,
+    deleteMergeConflictCommentIfNeed(pr) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const mergeConflictComment = this.findMergeConflictComment(pr);
+            if (!mergeConflictComment)
+                return false;
+            yield this.queryService.deleteComment(mergeConflictComment.id);
+            core.info(`Deleted a merge conflict comment from #${pr.number} PR.`);
+            return true;
         });
-        core.info(`Deleted a conflict comment from #${pr.number} PR.`);
-    });
+    }
+    findMergeConflictComment(pr) {
+        return pr.comments.nodes.find((comment) => comment.body === this.commentBody);
+    }
 }
-exports.deleteMergeConflictCommentIfNeed = deleteMergeConflictCommentIfNeed;
+exports.CommentService = CommentService;
 
 
 /***/ }),
@@ -172,66 +162,129 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getAllUnlockedPRs = void 0;
+exports.PullRequestService = void 0;
 const enum_1 = __nccwpck_require__(2210);
-function getAllUnlockedPRs(octokit, context) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let cursor;
-        let hasNextPage = true;
-        const unlockedPRs = [];
-        while (hasNextPage) {
-            const repoPRs = yield getRepositoryPullRequests(octokit, context, cursor);
-            if (!repoPRs || !repoPRs.repository) {
-                throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
-            }
-            for (const pr of repoPRs.repository.pullRequests.nodes) {
-                if (pr.mergeable === enum_1.MergeableState.Unknown) {
-                    throw new Error('There is a pull request with unknown mergeable status.');
+class PullRequestService {
+    constructor(queryService, owner, repo) {
+        this.queryService = queryService;
+        this.owner = owner;
+        this.repo = repo;
+    }
+    getAllUnlockedPRs() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let cursor;
+            let hasNextPage = true;
+            const unlockedPRs = [];
+            while (hasNextPage) {
+                const repoPRs = yield this.queryService.getRepositoryPullRequests(this.owner, this.repo, cursor);
+                if (!repoPRs || !repoPRs.repository) {
+                    throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
                 }
-                if (!pr.locked) {
-                    unlockedPRs.push(pr);
+                for (const pr of repoPRs.repository.pullRequests.nodes) {
+                    if (pr.mergeable === enum_1.MergeableState.Unknown) {
+                        throw new Error('There is a pull request with unknown mergeable status.');
+                    }
+                    if (!pr.locked) {
+                        unlockedPRs.push(pr);
+                    }
                 }
+                cursor = repoPRs.repository.pullRequests.pageInfo.endCursor;
+                hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
             }
-            cursor = repoPRs.repository.pullRequests.pageInfo.endCursor;
-            hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
-        }
-        return unlockedPRs;
-    });
+            return unlockedPRs;
+        });
+    }
 }
-exports.getAllUnlockedPRs = getAllUnlockedPRs;
-function getRepositoryPullRequests(octokit, context, cursor) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const query = `query ($owner: String!, $repo: String!, $after: String) {
-      repository(owner: $owner, name: $repo) {
-        pullRequests(first: 100, states: OPEN, after: $after) {
-          nodes {
-            id
-            number
-            mergeable
-            locked
-            updatedAt
-            comments(last: 100) {
-              nodes {
-                id
-                body
-                createdAt
+exports.PullRequestService = PullRequestService;
+
+
+/***/ }),
+
+/***/ 6053:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QueryService = void 0;
+class QueryService {
+    constructor(octokit) {
+        this.octokit = octokit;
+    }
+    getRepositoryPullRequests(owner, repo, cursor) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `query ($owner: String!, $repo: String!, $after: String) {
+        repository(owner: $owner, name: $repo) {
+          pullRequests(first: 100, states: OPEN, after: $after) {
+            nodes {
+              id
+              number
+              mergeable
+              locked
+              updatedAt
+              comments(last: 100) {
+                nodes {
+                  id
+                  body
+                  createdAt
+                }
               }
             }
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
           }
         }
+      }`;
+            return this.octokit.graphql(query, {
+                owner,
+                repo,
+                after: cursor,
+            });
+        });
+    }
+    addComment(prId, body) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `mutation ($subjectId: ID!, $body: String!) {
+      addComment(input: {
+        subjectId: $subjectId
+        body: $body
+      }) {
+        clientMutationId
       }
     }`;
-        return octokit.graphql(query, {
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            after: cursor,
+            yield this.octokit.graphql(query, {
+                subjectId: prId,
+                body,
+            });
         });
-    });
+    }
+    deleteComment(commentId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `mutation ($id: ID!) {
+      deleteIssueComment(input: {
+        id: $id
+      }) {
+        clientMutationId
+      }
+    }`;
+            yield this.octokit.graphql(query, {
+                id: commentId,
+            });
+        });
+    }
 }
+exports.QueryService = QueryService;
 
 
 /***/ }),
@@ -280,6 +333,7 @@ const github = __importStar(__nccwpck_require__(5438));
 const comment_1 = __nccwpck_require__(1667);
 const enum_1 = __nccwpck_require__(2210);
 const pull_request_1 = __nccwpck_require__(1843);
+const query_1 = __nccwpck_require__(6053);
 const utils_1 = __nccwpck_require__(918);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -291,19 +345,18 @@ function run() {
         const commentBody = core.getInput('comment-body');
         core.debug(`waitMS=${waitMS}; maxRetries=${maxRetries}; commentBody=${commentBody}`);
         const octokit = github.getOctokit(token);
-        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return (0, pull_request_1.getAllUnlockedPRs)(octokit, github.context); }), waitMS, maxRetries);
+        const { owner, repo } = github.context.repo;
+        const queryService = new query_1.QueryService(octokit);
+        const pullRequestService = new pull_request_1.PullRequestService(queryService, owner, repo);
+        const commentService = new comment_1.CommentService(queryService, commentBody);
+        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return pullRequestService.getAllUnlockedPRs(); }), waitMS, maxRetries);
         core.info(`Found ${prs.length} unlocked PRs.`);
-        yield Promise.all(prs.map((pr) => updateMergeConflictComment(octokit, pr, commentBody)));
+        yield Promise.all(prs.map((pr) => pr.mergeable === enum_1.MergeableState.Conflicting
+            ? commentService.addMergeConflictCommentIfNeed(pr)
+            : commentService.deleteMergeConflictCommentIfNeed(pr)));
     });
 }
 exports.run = run;
-function updateMergeConflictComment(octokit, pr, commentBody) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return pr.mergeable === enum_1.MergeableState.Conflicting
-            ? (0, comment_1.addMergeConflictCommentIfNeed)(octokit, pr, commentBody)
-            : (0, comment_1.deleteMergeConflictCommentIfNeed)(octokit, pr, commentBody);
-    });
-}
 
 
 /***/ }),

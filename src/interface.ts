@@ -10,7 +10,7 @@ export interface Comment {
 
 export interface PullRequest {
   id: string;
-  number: string;
+  number: number;
   mergeable: string;
   locked: boolean;
   updatedAt: string;

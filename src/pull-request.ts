@@ -1,71 +1,48 @@
-import { Context } from '@actions/github/lib/context';
 import { MergeableState } from './enum';
-import { GitHub, PullRequest, RepositoryPullRequests } from './interface';
+import { PullRequest } from './interface';
+import { QueryService } from './query';
 
-export async function getAllUnlockedPRs(octokit: GitHub, context: Context) {
-  let cursor: string | undefined;
-  let hasNextPage = true;
+export class PullRequestService {
+  constructor(
+    private readonly queryService: QueryService,
+    private readonly owner: string,
+    private readonly repo: string,
+  ) {}
 
-  const unlockedPRs: PullRequest[] = [];
+  async getAllUnlockedPRs() {
+    let cursor: string | undefined;
+    let hasNextPage = true;
 
-  while (hasNextPage) {
-    const repoPRs = await getRepositoryPullRequests(octokit, context, cursor);
+    const unlockedPRs: PullRequest[] = [];
 
-    if (!repoPRs || !repoPRs.repository) {
-      throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
-    }
+    while (hasNextPage) {
+      const repoPRs = await this.queryService.getRepositoryPullRequests(
+        this.owner,
+        this.repo,
+        cursor,
+      );
 
-    for (const pr of repoPRs.repository.pullRequests.nodes) {
-      if (pr.mergeable === MergeableState.Unknown) {
+      if (!repoPRs || !repoPRs.repository) {
         throw new Error(
-          'There is a pull request with unknown mergeable status.',
+          `Failed to get list of PRs: ${JSON.stringify(repoPRs)}`,
         );
       }
-      if (!pr.locked) {
-        unlockedPRs.push(pr);
-      }
-    }
 
-    cursor = repoPRs.repository.pullRequests.pageInfo.endCursor;
-    hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
-  }
-
-  return unlockedPRs;
-}
-
-async function getRepositoryPullRequests(
-  octokit: GitHub,
-  context: Context,
-  cursor?: string,
-) {
-  const query = `query ($owner: String!, $repo: String!, $after: String) {
-      repository(owner: $owner, name: $repo) {
-        pullRequests(first: 100, states: OPEN, after: $after) {
-          nodes {
-            id
-            number
-            mergeable
-            locked
-            updatedAt
-            comments(last: 100) {
-              nodes {
-                id
-                body
-                createdAt
-              }
-            }
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
+      for (const pr of repoPRs.repository.pullRequests.nodes) {
+        if (pr.mergeable === MergeableState.Unknown) {
+          throw new Error(
+            'There is a pull request with unknown mergeable status.',
+          );
+        }
+        if (!pr.locked) {
+          unlockedPRs.push(pr);
         }
       }
-    }`;
 
-  return octokit.graphql<RepositoryPullRequests>(query, {
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    after: cursor,
-  });
+      cursor = repoPRs.repository.pullRequests.pageInfo.endCursor;
+      hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
+    }
+
+    return unlockedPRs;
+  }
 }

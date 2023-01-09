@@ -1,56 +1,38 @@
 import * as core from '@actions/core';
-import { GitHub, PullRequest } from './interface';
+import { PullRequest } from './interface';
+import { QueryService } from './query';
 
-export async function addMergeConflictCommentIfNeed(
-  octokit: GitHub,
-  pr: PullRequest,
-  commentBody: string,
-): Promise<void> {
-  const mergeConflictComment = pr.comments.nodes.find(
-    (comment) => comment.body === commentBody,
-  );
+export class CommentService {
+  constructor(
+    private readonly queryService: QueryService,
+    private readonly commentBody: string,
+  ) {}
 
-  if (mergeConflictComment) return;
+  async addMergeConflictCommentIfNeed(
+    pr: Pick<PullRequest, 'comments' | 'id' | 'number'>,
+  ): Promise<boolean> {
+    const mergeConflictComment = this.findMergeConflictComment(pr);
+    if (mergeConflictComment) return false;
 
-  const query = `mutation ($subjectId: ID!, $body: String!) {
-    addComment(input: {
-      subjectId: $subjectId
-      body: $body
-    }) {
-      clientMutationId
-    }
-  }`;
+    await this.queryService.addComment(pr.id, this.commentBody);
+    core.info(`Added a merge conflict comment to #${pr.number} PR.`);
+    return true;
+  }
 
-  await octokit.graphql(query, {
-    subjectId: pr.id,
-    body: commentBody,
-  });
+  async deleteMergeConflictCommentIfNeed(
+    pr: Pick<PullRequest, 'comments' | 'number'>,
+  ): Promise<boolean> {
+    const mergeConflictComment = this.findMergeConflictComment(pr);
+    if (!mergeConflictComment) return false;
 
-  core.info(`Added a merge conflict comment to #${pr.number} PR.`);
-}
+    await this.queryService.deleteComment(mergeConflictComment.id);
+    core.info(`Deleted a merge conflict comment from #${pr.number} PR.`);
+    return true;
+  }
 
-export async function deleteMergeConflictCommentIfNeed(
-  octokit: GitHub,
-  pr: PullRequest,
-  commentBody: string,
-): Promise<void> {
-  const mergeConflictComment = pr.comments.nodes.find(
-    (comment) => comment.body === commentBody,
-  );
-
-  if (!mergeConflictComment) return;
-
-  const query = `mutation ($id: ID!) {
-    deleteIssueComment(input: {
-      id: $id
-    }) {
-      clientMutationId
-    }
-  }`;
-
-  await octokit.graphql(query, {
-    id: mergeConflictComment.id,
-  });
-
-  core.info(`Deleted a conflict comment from #${pr.number} PR.`);
+  private findMergeConflictComment(pr: Pick<PullRequest, 'comments'>) {
+    return pr.comments.nodes.find(
+      (comment) => comment.body === this.commentBody,
+    );
+  }
 }
