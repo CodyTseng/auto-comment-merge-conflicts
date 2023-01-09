@@ -407,7 +407,7 @@ function retry(fn, waitMS, maxRetries) {
             return yield fn();
         }
         catch (err) {
-            if (maxRetries <= 0)
+            if (maxRetries <= 1)
                 throw err;
             core.info(err.message + ` wait ${waitMS} ms and try again...`);
             yield wait(waitMS);

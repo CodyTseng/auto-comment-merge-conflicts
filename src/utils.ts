@@ -8,7 +8,7 @@ export async function retry<T>(
   try {
     return await fn();
   } catch (err) {
-    if (maxRetries <= 0) throw err;
+    if (maxRetries <= 1) throw err;
 
     core.info((err as Error).message + ` wait ${waitMS} ms and try again...`);
     await wait(waitMS);
