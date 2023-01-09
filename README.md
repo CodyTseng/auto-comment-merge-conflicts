@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: codytseng/auto-comment-merge-conflicts@master
+      - uses: codytseng/auto-comment-merge-conflicts@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```

@@ -1,6 +1,6 @@
 {
   "name": "auto-comment-merge-conflict",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Github Action to automatically add comments to alert developers when there are merge conflicts",
   "main": "lib/main.js",
