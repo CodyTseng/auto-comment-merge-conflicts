@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
+  "name": "auto-comment-merge-conflict",
   "version": "0.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "Github Action to automatically add comments to alert developers when there are merge conflicts",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -15,14 +15,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/CodyTseng/auto-comment-merge-conflicts.git"
   },
   "keywords": [
     "actions",
-    "node",
-    "setup"
+    "merge",
+    "conflict",
+    "comment"
   ],
-  "author": "",
+  "author": "CodyTseng",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.10.0",
