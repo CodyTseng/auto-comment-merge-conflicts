@@ -9,14 +9,10 @@ This action checks all unlocked open Pull Requests for merge conflicts and add a
 ## Usage
 
 ```
-on:
-  push:
-    pull_request:
-    branches:
-    - main
+on: push
 
 jobs:
-  triage:
+  auto-comment-merge-conflicts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -25,11 +21,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-|    input     | description                                                   | required | default        |
-| :----------: | :------------------------------------------------------------ | :------: | :------------- |
-|    token     | GitHub token                                                  |   true   |                |
+### List of input options
+
+| input        | description                                                   | required | default        |
+| :----------- | :------------------------------------------------------------ | :------: | :------------- |
+| token        | GitHub token                                                  |   true   |                |
 | comment-body | Comment body                                                  |  false   | Merge Conflict |
-|   wait-ms    | Milliseconds between retries                                  |  false   | 3000           |
+| wait-ms      | Milliseconds between retries                                  |  false   | 3000           |
 | max-retries  | The number of retries when a PR mergeable status is `UNKNOWN` |  false   | 5              |
 
 ## How does it work?
