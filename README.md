@@ -6,16 +6,21 @@
 
 This action checks all unlocked open Pull Requests for merge conflicts and add a comment if need. When a conflict is resolved the comment is automatically removed.
 
+![effect](.github/images/effect.png)
+
 ## Usage
 
 ```
+name: Auto Comment Merge Conflicts
 on: push
+
+permissions:
+  pull-requests: write
 
 jobs:
   auto-comment-merge-conflicts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
       - uses: codytseng/auto-comment-merge-conflicts@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
