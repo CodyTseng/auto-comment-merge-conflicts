@@ -1,12 +1,18 @@
+import { Context } from '@actions/github/lib/context';
 import { describe, expect, jest, test } from '@jest/globals';
 import { CommentService } from './../src/comment';
 import { QueryService } from './../src/query';
 
 describe('CommentService', () => {
+  const owner = 'codytseng';
+  const repo = 'auto-comment-merge-conflicts';
   const commentBody = 'Merge Conflict';
 
   describe('addMergeConflictCommentIfNeed', () => {
-    const queryService = new QueryService({} as any);
+    const queryService = new QueryService(
+      {} as any,
+      { repo: { owner, repo } } as Context,
+    );
     const mockAddComment = jest
       .spyOn(queryService, 'addComment')
       .mockResolvedValue();
@@ -34,7 +40,6 @@ describe('CommentService', () => {
             {
               id: 'id',
               body: commentBody,
-              createdAt: new Date().toUTCString(),
             },
           ],
         },
@@ -45,7 +50,10 @@ describe('CommentService', () => {
   });
 
   describe('deleteMergeConflictCommentIfNeed', () => {
-    const queryService = new QueryService({} as any);
+    const queryService = new QueryService(
+      {} as any,
+      { repo: { owner, repo } } as Context,
+    );
     const mockDeleteComment = jest
       .spyOn(queryService, 'deleteComment')
       .mockResolvedValue();
@@ -60,7 +68,6 @@ describe('CommentService', () => {
             {
               id: 'id',
               body: commentBody,
-              createdAt: new Date().toUTCString(),
             },
           ],
         },

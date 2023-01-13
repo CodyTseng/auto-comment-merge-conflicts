@@ -3,11 +3,7 @@ import { PullRequest } from './interface';
 import { QueryService } from './query';
 
 export class PullRequestService {
-  constructor(
-    private readonly queryService: QueryService,
-    private readonly owner: string,
-    private readonly repo: string,
-  ) {}
+  constructor(private readonly queryService: QueryService) {}
 
   async getAllUnlockedPRs() {
     let cursor: string | undefined;
@@ -16,11 +12,7 @@ export class PullRequestService {
     const unlockedPRs: PullRequest[] = [];
 
     while (hasNextPage) {
-      const repoPRs = await this.queryService.getRepositoryPullRequests(
-        this.owner,
-        this.repo,
-        cursor,
-      );
+      const repoPRs = await this.queryService.getRepositoryPullRequests(cursor);
 
       if (!repoPRs || !repoPRs.repository) {
         throw new Error(

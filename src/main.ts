@@ -1,9 +1,11 @@
 import * as core from '@actions/core';
-import { run } from './run';
+import { Runner } from './run';
 
 async function main() {
   try {
-    await run();
+    const runner = new Runner();
+    await runner.init();
+    await runner.run();
   } catch (err) {
     core.setFailed(err as Error);
   }

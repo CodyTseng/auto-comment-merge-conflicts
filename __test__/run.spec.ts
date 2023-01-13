@@ -4,7 +4,7 @@ import { describe, expect, jest, test } from '@jest/globals';
 import { CommentService } from '../src/comment';
 import { MergeableState } from '../src/enum';
 import { PullRequestService } from '../src/pull-request';
-import { run } from '../src/run';
+import { Runner } from '../src/run';
 
 describe('run', () => {
   test('should succeed', async () => {
@@ -33,6 +33,7 @@ describe('run', () => {
           locked: false,
           updatedAt: new Date().toUTCString(),
           comments: { nodes: [] },
+          labels: { nodes: [] },
         },
         {
           id: 'prId',
@@ -41,6 +42,7 @@ describe('run', () => {
           locked: false,
           updatedAt: new Date().toUTCString(),
           comments: { nodes: [] },
+          labels: { nodes: [] },
         },
       ]);
 
@@ -51,7 +53,10 @@ describe('run', () => {
       .spyOn(CommentService.prototype, 'deleteMergeConflictCommentIfNeed')
       .mockResolvedValue(false);
 
-    await run();
+    const runner = new Runner();
+    await runner.init();
+    await runner.run();
+
     expect(mockAddMergeConflictCommentIfNeed).toBeCalledTimes(1);
     expect(mockDeleteMergeConflictCommentIfNeed).toBeCalledTimes(1);
   });

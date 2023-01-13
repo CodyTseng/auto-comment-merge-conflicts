@@ -34,7 +34,7 @@ jobs:
 | comment-body | Comment body                                                  |  false   | Merge Conflict |
 | wait-ms      | Milliseconds between retries                                  |  false   | 3000           |
 | max-retries  | The number of retries when a PR mergeable status is `UNKNOWN` |  false   | 5              |
-| test         | ...                                                           |          |                |
+| label-name   | Label name                                                    |  false   |                |
 
 ## How does it work?
 
