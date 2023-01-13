@@ -20,6 +20,9 @@ inputs:
     required: false
     description: 'The number of retries when a PR mergeable status is unknown'
     default: 5
+  label-name:
+    required: false
+    description: 'Label name'
 runs:
   using: 'node16'
   main: 'dist/index.js'

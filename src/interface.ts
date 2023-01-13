@@ -5,7 +5,11 @@ export type GitHub = ReturnType<typeof github.getOctokit>;
 export interface Comment {
   id: string;
   body: string;
-  createdAt: string;
+}
+
+export interface Label {
+  id: string;
+  name: string;
 }
 
 export interface PullRequest {
@@ -16,6 +20,9 @@ export interface PullRequest {
   updatedAt: string;
   comments: {
     nodes: Comment[];
+  };
+  labels: {
+    nodes: Label[];
   };
 }
 
@@ -29,6 +36,14 @@ export interface RepositoryPullRequests {
     pullRequests: {
       nodes: PullRequest[];
       pageInfo: PageInfo;
+    };
+  };
+}
+
+export interface RepositoryLabels {
+  repository: {
+    labels: {
+      nodes: Label[];
     };
   };
 }

@@ -1,3 +1,4 @@
+import { Context } from '@actions/github/lib/context';
 import { describe, expect, jest, test } from '@jest/globals';
 import { MergeableState } from '../src/enum';
 import { RepositoryPullRequests } from '../src/interface';
@@ -9,12 +10,11 @@ describe('PullRequestService', () => {
   const repo = 'auto-comment-merge-conflicts';
 
   describe('getAllUnlockedPRs', () => {
-    const queryService = new QueryService({} as any);
-    const pullRequestService = new PullRequestService(
-      queryService,
-      owner,
-      repo,
+    const queryService = new QueryService(
+      {} as any,
+      { repo: { owner, repo } } as Context,
     );
+    const pullRequestService = new PullRequestService(queryService);
 
     test('should get unlocked PRs success', async () => {
       const response1: RepositoryPullRequests = {
@@ -28,6 +28,7 @@ describe('PullRequestService', () => {
                 locked: false,
                 updatedAt: new Date().toUTCString(),
                 comments: { nodes: [] },
+                labels: { nodes: [] },
               },
             ],
             pageInfo: {
@@ -48,6 +49,7 @@ describe('PullRequestService', () => {
                 locked: false,
                 updatedAt: new Date().toUTCString(),
                 comments: { nodes: [] },
+                labels: { nodes: [] },
               },
             ],
             pageInfo: {
@@ -83,6 +85,7 @@ describe('PullRequestService', () => {
                 locked: true,
                 updatedAt: new Date().toUTCString(),
                 comments: { nodes: [] },
+                labels: { nodes: [] },
               },
             ],
             pageInfo: {
@@ -131,6 +134,7 @@ describe('PullRequestService', () => {
                 locked: false,
                 updatedAt: new Date().toUTCString(),
                 comments: { nodes: [] },
+                labels: { nodes: [] },
               },
             ],
             pageInfo: {
