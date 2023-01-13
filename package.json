@@ -1,8 +1,8 @@
 {
   "name": "auto-comment-merge-conflict",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
-  "description": "Github Action to automatically add comments to alert developers when there are merge conflicts",
+  "description": "Github Action to automatically add a comment (and a label) to alert developers when there are merge conflicts",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -21,7 +21,10 @@
     "actions",
     "merge",
     "conflict",
-    "comment"
+    "comment",
+    "label",
+    "pr",
+    "pull request"
   ],
   "author": "CodyTseng",
   "license": "MIT",

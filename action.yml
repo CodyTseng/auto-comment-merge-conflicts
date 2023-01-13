@@ -1,5 +1,5 @@
 name: 'Auto Comment Merge Conflict'
-description: 'Github Action to automatically add comments to alert developers when there are merge conflicts'
+description: 'Github Action to automatically add a comment (and a label) to alert developers when there are merge conflicts'
 author: 'CodyTseng'
 branding:
   icon: 'git-merge'

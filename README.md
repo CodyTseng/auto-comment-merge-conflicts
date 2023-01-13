@@ -1,10 +1,10 @@
 # auto-comment-merge-conflicts
 
-> Github Action to automatically add comments to alert developers when there are merge conflicts
+> Github Action to automatically add a comment (and a label) to alert developers when there are merge conflicts
 
 ## Purpose
 
-This action checks all unlocked open Pull Requests for merge conflicts and add a comment if need. When a conflict is resolved the comment is automatically removed.
+This action checks all unlocked open Pull Requests for merge conflicts and add a comment (and a label) if need. When a conflict is resolved the comment (and the label) is automatically removed.
 
 ![effect](.github/images/effect.png)
 
