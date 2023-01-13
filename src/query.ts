@@ -1,13 +1,16 @@
-import { GitHub, RepositoryPullRequests } from './interface';
+import { Context } from '@actions/github/lib/context';
+import { GitHub, RepositoryLabels, RepositoryPullRequests } from './interface';
 
 export class QueryService {
-  constructor(private readonly octokit: GitHub) {}
+  private readonly owner: string;
+  private readonly repo: string;
 
-  async getRepositoryPullRequests(
-    owner: string,
-    repo: string,
-    cursor?: string,
-  ) {
+  constructor(private readonly octokit: GitHub, context: Context) {
+    this.owner = context.repo.owner;
+    this.repo = context.repo.repo;
+  }
+
+  async getRepositoryPullRequests(cursor?: string) {
     const query = `query ($owner: String!, $repo: String!, $after: String) {
         repository(owner: $owner, name: $repo) {
           pullRequests(first: 100, states: OPEN, after: $after) {
@@ -21,7 +24,12 @@ export class QueryService {
                 nodes {
                   id
                   body
-                  createdAt
+                }
+              }
+              labels(last: 100) {
+                nodes {
+                  id
+                  name
                 }
               }
             }
@@ -34,8 +42,8 @@ export class QueryService {
       }`;
 
     return this.octokit.graphql<RepositoryPullRequests>(query, {
-      owner,
-      repo,
+      owner: this.owner,
+      repo: this.repo,
       after: cursor,
     });
   }
@@ -67,6 +75,56 @@ export class QueryService {
 
     await this.octokit.graphql(query, {
       id: commentId,
+    });
+  }
+
+  async addLabel(prId: string, labelId: string) {
+    const query = `mutation ($prId: ID!, $labelId: ID!) {
+      addLabelsToLabelable(input: {
+        labelableId: $prId
+        labelIds: [$labelId]
+      }) {
+        clientMutationId
+      }
+    }`;
+
+    await this.octokit.graphql(query, {
+      prId,
+      labelId,
+    });
+  }
+
+  async removeLabel(prId: string, labelId: string) {
+    const query = `mutation ($prId: ID!, $labelId: ID!) {
+      removeLabelsFromLabelable(input: {
+        labelableId: $prId
+        labelIds: [$labelId]
+      }) {
+        clientMutationId
+      }
+    }`;
+
+    await this.octokit.graphql(query, {
+      prId,
+      labelId,
+    });
+  }
+
+  async getRepositoryLabels() {
+    const query = `query ($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        labels(first: 100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }`;
+
+    return await this.octokit.graphql<RepositoryLabels>(query, {
+      owner: this.owner,
+      repo: this.repo,
     });
   }
 }

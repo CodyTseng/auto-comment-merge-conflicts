@@ -92,6 +92,98 @@ var MergeableState;
 
 /***/ }),
 
+/***/ 7630:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LabelService = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+class LabelService {
+    constructor(queryService, labelName) {
+        this.queryService = queryService;
+        this.labelName = labelName;
+    }
+    init() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.labelName)
+                return;
+            const repoLabels = yield this.queryService.getRepositoryLabels();
+            if (!repoLabels || !repoLabels.repository) {
+                throw new Error(`Failed to get list of labels: ${JSON.stringify(repoLabels)}`);
+            }
+            const mergeConflictLabel = repoLabels.repository.labels.nodes.find((label) => label.name === this.labelName);
+            if (!mergeConflictLabel)
+                throw new Error(`The label ${this.labelName} not found.`);
+            this.labelId = mergeConflictLabel.id;
+        });
+    }
+    addMergeConflictLabelIfNeed(pr) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.labelId)
+                return false;
+            const label = this.findMergeConflictLabel(pr);
+            if (label)
+                return false;
+            yield this.queryService.addLabel(pr.id, this.labelId);
+            core.info(`Added a merge conflict label to #${pr.number} PR.`);
+            return true;
+        });
+    }
+    removeMergeConflictLabelIfNeed(pr) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.labelId)
+                return false;
+            const label = this.findMergeConflictLabel(pr);
+            if (!label)
+                return false;
+            yield this.queryService.removeLabel(pr.id, this.labelId);
+            core.info(`Remove a merge conflict label to #${pr.number} PR.`);
+            return true;
+        });
+    }
+    findMergeConflictLabel(pr) {
+        return pr.labels.nodes.find((label) => label.name === this.labelName);
+    }
+}
+exports.LabelService = LabelService;
+
+
+/***/ }),
+
 /***/ 3109:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -135,7 +227,9 @@ const run_1 = __nccwpck_require__(7884);
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            yield (0, run_1.run)();
+            const runner = new run_1.Runner();
+            yield runner.init();
+            yield runner.run();
         }
         catch (err) {
             core.setFailed(err);
@@ -165,10 +259,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestService = void 0;
 const enum_1 = __nccwpck_require__(2210);
 class PullRequestService {
-    constructor(queryService, owner, repo) {
+    constructor(queryService) {
         this.queryService = queryService;
-        this.owner = owner;
-        this.repo = repo;
     }
     getAllUnlockedPRs() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -176,7 +268,7 @@ class PullRequestService {
             let hasNextPage = true;
             const unlockedPRs = [];
             while (hasNextPage) {
-                const repoPRs = yield this.queryService.getRepositoryPullRequests(this.owner, this.repo, cursor);
+                const repoPRs = yield this.queryService.getRepositoryPullRequests(cursor);
                 if (!repoPRs || !repoPRs.repository) {
                     throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
                 }
@@ -217,10 +309,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueryService = void 0;
 class QueryService {
-    constructor(octokit) {
+    constructor(octokit, context) {
         this.octokit = octokit;
+        this.owner = context.repo.owner;
+        this.repo = context.repo.repo;
     }
-    getRepositoryPullRequests(owner, repo, cursor) {
+    getRepositoryPullRequests(cursor) {
         return __awaiter(this, void 0, void 0, function* () {
             const query = `query ($owner: String!, $repo: String!, $after: String) {
         repository(owner: $owner, name: $repo) {
@@ -235,7 +329,12 @@ class QueryService {
                 nodes {
                   id
                   body
-                  createdAt
+                }
+              }
+              labels(last: 100) {
+                nodes {
+                  id
+                  name
                 }
               }
             }
@@ -247,8 +346,8 @@ class QueryService {
         }
       }`;
             return this.octokit.graphql(query, {
-                owner,
-                repo,
+                owner: this.owner,
+                repo: this.repo,
                 after: cursor,
             });
         });
@@ -280,6 +379,56 @@ class QueryService {
     }`;
             yield this.octokit.graphql(query, {
                 id: commentId,
+            });
+        });
+    }
+    addLabel(prId, labelId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `mutation ($prId: ID!, $labelId: ID!) {
+      addLabelsToLabelable(input: {
+        labelableId: $prId
+        labelIds: [$labelId]
+      }) {
+        clientMutationId
+      }
+    }`;
+            yield this.octokit.graphql(query, {
+                prId,
+                labelId,
+            });
+        });
+    }
+    removeLabel(prId, labelId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `mutation ($prId: ID!, $labelId: ID!) {
+      removeLabelsFromLabelable(input: {
+        labelableId: $prId
+        labelIds: [$labelId]
+      }) {
+        clientMutationId
+      }
+    }`;
+            yield this.octokit.graphql(query, {
+                prId,
+                labelId,
+            });
+        });
+    }
+    getRepositoryLabels() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `query ($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        labels(first: 100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }`;
+            return yield this.octokit.graphql(query, {
+                owner: this.owner,
+                repo: this.repo,
             });
         });
     }
@@ -327,36 +476,63 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.Runner = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const comment_1 = __nccwpck_require__(1667);
 const enum_1 = __nccwpck_require__(2210);
+const label_1 = __nccwpck_require__(7630);
 const pull_request_1 = __nccwpck_require__(1843);
 const query_1 = __nccwpck_require__(6053);
 const utils_1 = __nccwpck_require__(918);
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
+class Runner {
+    constructor() {
         const token = core.getInput('token', {
             required: true,
         });
-        const waitMS = parseInt(core.getInput('wait-ms'));
-        const maxRetries = parseInt(core.getInput('max-retries'));
+        this.waitMS = parseInt(core.getInput('wait-ms'));
+        this.maxRetries = parseInt(core.getInput('max-retries'));
         const commentBody = core.getInput('comment-body');
-        core.debug(`waitMS=${waitMS}; maxRetries=${maxRetries}; commentBody=${commentBody}`);
+        const labelName = core.getInput('label-name') || undefined;
+        core.debug(`waitMS=${this.waitMS}; maxRetries=${this.maxRetries}; commentBody=${commentBody}`);
         const octokit = github.getOctokit(token);
-        const { owner, repo } = github.context.repo;
-        const queryService = new query_1.QueryService(octokit);
-        const pullRequestService = new pull_request_1.PullRequestService(queryService, owner, repo);
-        const commentService = new comment_1.CommentService(queryService, commentBody);
-        const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return pullRequestService.getAllUnlockedPRs(); }), waitMS, maxRetries);
-        core.info(`Found ${prs.length} unlocked PRs.`);
-        yield Promise.all(prs.map((pr) => pr.mergeable === enum_1.MergeableState.Conflicting
-            ? commentService.addMergeConflictCommentIfNeed(pr)
-            : commentService.deleteMergeConflictCommentIfNeed(pr)));
-    });
+        this.queryService = new query_1.QueryService(octokit, github.context);
+        this.pullRequestService = new pull_request_1.PullRequestService(this.queryService);
+        this.commentService = new comment_1.CommentService(this.queryService, commentBody);
+        this.labelService = new label_1.LabelService(this.queryService, labelName);
+    }
+    init() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.labelService.init();
+        });
+    }
+    run() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return this.pullRequestService.getAllUnlockedPRs(); }), this.waitMS, this.maxRetries);
+            core.info(`Found ${prs.length} unlocked PRs.`);
+            yield Promise.all(prs.map((pr) => pr.mergeable === enum_1.MergeableState.Conflicting
+                ? this.addMergeConflictIfNeed(pr)
+                : this.removeMergeConflictIfNeed(pr)));
+        });
+    }
+    addMergeConflictIfNeed(pr) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Promise.all([
+                this.commentService.addMergeConflictCommentIfNeed(pr),
+                this.labelService.addMergeConflictLabelIfNeed(pr),
+            ]);
+        });
+    }
+    removeMergeConflictIfNeed(pr) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Promise.all([
+                this.commentService.deleteMergeConflictCommentIfNeed(pr),
+                this.labelService.removeMergeConflictLabelIfNeed(pr),
+            ]);
+        });
+    }
 }
-exports.run = run;
+exports.Runner = Runner;
 
 
 /***/ }),
