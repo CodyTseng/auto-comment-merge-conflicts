@@ -20,6 +20,9 @@ export class QueryService {
               mergeable
               locked
               updatedAt
+              author {
+                login
+              }
               comments(last: 100) {
                 nodes {
                   id

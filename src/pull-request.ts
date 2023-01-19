@@ -2,14 +2,27 @@ import { MergeableState } from './enum';
 import { OutputPullRequest, PullRequest } from './interface';
 import { QueryService } from './query';
 
-export class PullRequestService {
-  constructor(private readonly queryService: QueryService) {}
+type PRFilterFn = (pr: PullRequest) => boolean;
 
-  async getAllUnlockedPRs() {
+type PullRequestServiceOptions = {
+  ignoreAuthors?: string[];
+};
+
+export class PullRequestService {
+  private prFilterFn: PRFilterFn;
+
+  constructor(
+    private readonly queryService: QueryService,
+    options?: PullRequestServiceOptions,
+  ) {
+    this.prFilterFn = this.getPRFilterFn(options);
+  }
+
+  async getAllPRs() {
     let cursor: string | undefined;
     let hasNextPage = true;
 
-    const unlockedPRs: PullRequest[] = [];
+    const prs: PullRequest[] = [];
 
     while (hasNextPage) {
       const repoPRs = await this.queryService.getRepositoryPullRequests(cursor);
@@ -26,8 +39,8 @@ export class PullRequestService {
             'There is a pull request with unknown mergeable status.',
           );
         }
-        if (!pr.locked) {
-          unlockedPRs.push(pr);
+        if (this.prFilterFn(pr)) {
+          prs.push(pr);
         }
       }
 
@@ -35,7 +48,7 @@ export class PullRequestService {
       hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
     }
 
-    return unlockedPRs;
+    return prs;
   }
 
   static toOutputPR(pr: PullRequest): OutputPullRequest {
@@ -46,6 +59,13 @@ export class PullRequestService {
       url: pr.url,
       baseRefName: pr.baseRefName,
       headRefName: pr.headRefName,
+    };
+  }
+
+  private getPRFilterFn(options: PullRequestServiceOptions = {}): PRFilterFn {
+    const { ignoreAuthors = [] } = options;
+    return (pr: PullRequest) => {
+      return !pr.locked && !ignoreAuthors.includes(pr.author.login);
     };
   }
 }

@@ -24,17 +24,23 @@ jobs:
       - uses: codytseng/auto-comment-merge-conflicts@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          comment-body: "Merge Conflict"
+          wait-ms: 3000
+          max-retries: 5
+          label-name: conflict
+          ignore-authors: dependabot,otherAuthor
 ```
 
 ### List of input options
 
-| input        | description                                                   | required | default        |
-| :----------- | :------------------------------------------------------------ | :------: | :------------- |
-| token        | GitHub token                                                  |   true   |                |
-| comment-body | Comment body                                                  |  false   | Merge Conflict |
-| wait-ms      | Milliseconds between retries                                  |  false   | 3000           |
-| max-retries  | The number of retries when a PR mergeable status is `UNKNOWN` |  false   | 5              |
-| label-name   | Label name                                                    |  false   |                |
+| input          | description                                                   | required | default        |
+| :------------- | :------------------------------------------------------------ | :------: | :------------- |
+| token          | GitHub token                                                  |   true   |                |
+| comment-body   | Comment body                                                  |  false   | Merge Conflict |
+| wait-ms        | Milliseconds between retries                                  |  false   | 3000           |
+| max-retries    | The number of retries when a PR mergeable status is `UNKNOWN` |  false   | 5              |
+| label-name     | Label name                                                    |  false   |                |
+| ignore-authors | Ignore some author's PR                                       |  false   |                |
 
 ### List of output options
 

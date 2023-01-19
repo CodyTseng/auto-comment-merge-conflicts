@@ -259,14 +259,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestService = void 0;
 const enum_1 = __nccwpck_require__(2210);
 class PullRequestService {
-    constructor(queryService) {
+    constructor(queryService, options) {
         this.queryService = queryService;
+        this.prFilterFn = this.getPRFilterFn(options);
     }
-    getAllUnlockedPRs() {
+    getAllPRs() {
         return __awaiter(this, void 0, void 0, function* () {
             let cursor;
             let hasNextPage = true;
-            const unlockedPRs = [];
+            const prs = [];
             while (hasNextPage) {
                 const repoPRs = yield this.queryService.getRepositoryPullRequests(cursor);
                 if (!repoPRs || !repoPRs.repository) {
@@ -276,14 +277,14 @@ class PullRequestService {
                     if (pr.mergeable === enum_1.MergeableState.Unknown) {
                         throw new Error('There is a pull request with unknown mergeable status.');
                     }
-                    if (!pr.locked) {
-                        unlockedPRs.push(pr);
+                    if (this.prFilterFn(pr)) {
+                        prs.push(pr);
                     }
                 }
                 cursor = repoPRs.repository.pullRequests.pageInfo.endCursor;
                 hasNextPage = repoPRs.repository.pullRequests.pageInfo.hasNextPage;
             }
-            return unlockedPRs;
+            return prs;
         });
     }
     static toOutputPR(pr) {
@@ -294,6 +295,12 @@ class PullRequestService {
             url: pr.url,
             baseRefName: pr.baseRefName,
             headRefName: pr.headRefName,
+        };
+    }
+    getPRFilterFn(options = {}) {
+        const { ignoreAuthors = [] } = options;
+        return (pr) => {
+            return !pr.locked && !ignoreAuthors.includes(pr.author.login);
         };
     }
 }
@@ -335,6 +342,9 @@ class QueryService {
               mergeable
               locked
               updatedAt
+              author {
+                login
+              }
               comments(last: 100) {
                 nodes {
                   id
@@ -506,10 +516,13 @@ class Runner {
         this.maxRetries = parseInt(core.getInput('max-retries'));
         const commentBody = core.getInput('comment-body');
         const labelName = core.getInput('label-name') || undefined;
-        core.debug(`waitMS=${this.waitMS}; maxRetries=${this.maxRetries}; commentBody=${commentBody}`);
+        const ignoreAuthors = (core.getInput('ignore-authors') || '').split(',');
+        core.debug(`waitMS=${this.waitMS}; maxRetries=${this.maxRetries}; commentBody=${commentBody}; ignoreAuthors=${ignoreAuthors}`);
         const octokit = github.getOctokit(token);
         this.queryService = new query_1.QueryService(octokit, github.context);
-        this.pullRequestService = new pull_request_1.PullRequestService(this.queryService);
+        this.pullRequestService = new pull_request_1.PullRequestService(this.queryService, {
+            ignoreAuthors,
+        });
         this.commentService = new comment_1.CommentService(this.queryService, commentBody);
         this.labelService = new label_1.LabelService(this.queryService, labelName);
     }
@@ -520,8 +533,8 @@ class Runner {
     }
     run() {
         return __awaiter(this, void 0, void 0, function* () {
-            const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return this.pullRequestService.getAllUnlockedPRs(); }), this.waitMS, this.maxRetries);
-            core.info(`Found ${prs.length} unlocked PRs.`);
+            const prs = yield (0, utils_1.retry)(() => __awaiter(this, void 0, void 0, function* () { return this.pullRequestService.getAllPRs(); }), this.waitMS, this.maxRetries);
+            core.info(`Found ${prs.length} PRs.`);
             yield Promise.all(prs.map((pr) => pr.mergeable === enum_1.MergeableState.Conflicting
                 ? this.addMergeConflictIfNeed(pr)
                 : this.removeMergeConflictIfNeed(pr)));

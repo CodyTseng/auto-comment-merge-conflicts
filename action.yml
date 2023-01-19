@@ -23,6 +23,9 @@ inputs:
   label-name:
     required: false
     description: 'Label name'
+  ignore-authors:
+    required: false
+    description: "Ignore some author's PR"
 outputs:
   new-conflicting-prs:
     description: 'List of all new conflicting PRs (json string)'

@@ -12,8 +12,13 @@ export interface Label {
   name: string;
 }
 
+export interface Actor {
+  login: string;
+}
+
 export interface PullRequest {
   id: string;
+  author: Actor;
   number: number;
   title: string;
   url: string;

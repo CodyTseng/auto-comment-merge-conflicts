@@ -29,14 +29,17 @@ export class Runner {
 
     const commentBody = core.getInput('comment-body');
     const labelName = core.getInput('label-name') || undefined;
+    const ignoreAuthors = (core.getInput('ignore-authors') || '').split(',');
     core.debug(
-      `waitMS=${this.waitMS}; maxRetries=${this.maxRetries}; commentBody=${commentBody}`,
+      `waitMS=${this.waitMS}; maxRetries=${this.maxRetries}; commentBody=${commentBody}; ignoreAuthors=${ignoreAuthors}`,
     );
 
     const octokit = github.getOctokit(token);
 
     this.queryService = new QueryService(octokit, github.context);
-    this.pullRequestService = new PullRequestService(this.queryService);
+    this.pullRequestService = new PullRequestService(this.queryService, {
+      ignoreAuthors,
+    });
     this.commentService = new CommentService(this.queryService, commentBody);
     this.labelService = new LabelService(this.queryService, labelName);
   }
@@ -47,12 +50,12 @@ export class Runner {
 
   async run() {
     const prs = await retry(
-      async () => this.pullRequestService.getAllUnlockedPRs(),
+      async () => this.pullRequestService.getAllPRs(),
       this.waitMS,
       this.maxRetries,
     );
 
-    core.info(`Found ${prs.length} unlocked PRs.`);
+    core.info(`Found ${prs.length} PRs.`);
 
     await Promise.all(
       prs.map((pr) =>
