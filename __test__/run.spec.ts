@@ -29,6 +29,7 @@ describe('run', () => {
       mergeable: MergeableState.Conflicting,
       locked: false,
       updatedAt: new Date().toUTCString(),
+      author: { login: 'username' },
       comments: { nodes: [] },
       labels: { nodes: [] },
     };
@@ -43,6 +44,7 @@ describe('run', () => {
       mergeable: MergeableState.Mergeable,
       locked: false,
       updatedAt: new Date().toUTCString(),
+      author: { login: 'username' },
       comments: {
         nodes: [{ id: 'commentId', body: input['comment-body'] }],
       },
@@ -61,7 +63,7 @@ describe('run', () => {
       .mockImplementation((name, value) => (output[name] = value));
     jest.spyOn(github, 'getOctokit').mockImplementation(() => ({} as any));
     jest
-      .spyOn(PullRequestService.prototype, 'getAllUnlockedPRs')
+      .spyOn(PullRequestService.prototype, 'getAllPRs')
       .mockResolvedValue([newConflictingPR, newMergeablePR]);
     jest
       .spyOn(QueryService.prototype, 'getRepositoryLabels')
