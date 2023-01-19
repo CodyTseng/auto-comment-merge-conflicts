@@ -1,5 +1,5 @@
 import { MergeableState } from './enum';
-import { PullRequest } from './interface';
+import { OutputPullRequest, PullRequest } from './interface';
 import { QueryService } from './query';
 
 export class PullRequestService {
@@ -36,5 +36,16 @@ export class PullRequestService {
     }
 
     return unlockedPRs;
+  }
+
+  static toOutputPR(pr: PullRequest): OutputPullRequest {
+    return {
+      id: pr.id,
+      number: pr.number,
+      title: pr.title,
+      url: pr.url,
+      baseRefName: pr.baseRefName,
+      headRefName: pr.headRefName,
+    };
   }
 }

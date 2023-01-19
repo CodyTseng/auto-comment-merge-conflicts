@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { CommentService } from './comment';
 import { MergeableState } from './enum';
-import { PullRequest } from './interface';
+import { PullRequest, OutputPullRequest } from './interface';
 import { LabelService } from './label';
 import { PullRequestService } from './pull-request';
 import { QueryService } from './query';
@@ -15,6 +15,9 @@ export class Runner {
   private readonly pullRequestService: PullRequestService;
   private readonly commentService: CommentService;
   private readonly labelService: LabelService;
+
+  private readonly newConflictingPRs: OutputPullRequest[] = [];
+  private readonly newMergeablePRs: OutputPullRequest[] = [];
 
   constructor() {
     const token = core.getInput('token', {
@@ -58,19 +61,31 @@ export class Runner {
           : this.removeMergeConflictIfNeed(pr),
       ),
     );
+
+    core.setOutput(
+      'new-conflicting-prs',
+      JSON.stringify(this.newConflictingPRs),
+    );
+    core.setOutput('new-mergeable-prs', JSON.stringify(this.newMergeablePRs));
   }
 
   private async addMergeConflictIfNeed(pr: PullRequest) {
-    await Promise.all([
+    const [isMergeConflictPR] = await Promise.all([
       this.commentService.addMergeConflictCommentIfNeed(pr),
       this.labelService.addMergeConflictLabelIfNeed(pr),
     ]);
+
+    if (isMergeConflictPR)
+      this.newConflictingPRs.push(PullRequestService.toOutputPR(pr));
   }
 
   private async removeMergeConflictIfNeed(pr: PullRequest) {
-    await Promise.all([
+    const [isNewMergeablePR] = await Promise.all([
       this.commentService.deleteMergeConflictCommentIfNeed(pr),
       this.labelService.removeMergeConflictLabelIfNeed(pr),
     ]);
+
+    if (isNewMergeablePR)
+      this.newMergeablePRs.push(PullRequestService.toOutputPR(pr));
   }
 }

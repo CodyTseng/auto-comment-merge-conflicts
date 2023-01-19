@@ -36,6 +36,26 @@ jobs:
 | max-retries  | The number of retries when a PR mergeable status is `UNKNOWN` |  false   | 5              |
 | label-name   | Label name                                                    |  false   |                |
 
+### List of output options
+
+| input               | description                                   |
+| :------------------ | :-------------------------------------------- |
+| new-conflicting-prs | List of all new conflicting PRs (json string) |
+| new-mergeable-prs   | List of all new mergeable PRs (json string)   |
+
+The type of PR:
+
+```
+{
+  id: string;
+  number: number; // Identifies the pull request number.
+  title: string; // Identifies the pull request title.
+  url: string; // The HTTP URL for this pull request.
+  headRefName: string; // Identifies the name of the head Ref associated with the pull request, even if the ref has been deleted.
+  baseRefName: string; // Identifies the name of the base Ref associated with the pull request, even if the ref has been deleted.
+}
+```
+
 ## How does it work?
 
 1. Get all unlocked open PRs. (Will wait `${wait-ms}` ms and retry if it contains a PR with `UNKNOWN` mergeable status.)

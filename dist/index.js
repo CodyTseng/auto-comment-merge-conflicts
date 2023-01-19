@@ -286,6 +286,16 @@ class PullRequestService {
             return unlockedPRs;
         });
     }
+    static toOutputPR(pr) {
+        return {
+            id: pr.id,
+            number: pr.number,
+            title: pr.title,
+            url: pr.url,
+            baseRefName: pr.baseRefName,
+            headRefName: pr.headRefName,
+        };
+    }
 }
 exports.PullRequestService = PullRequestService;
 
@@ -487,6 +497,8 @@ const query_1 = __nccwpck_require__(6053);
 const utils_1 = __nccwpck_require__(918);
 class Runner {
     constructor() {
+        this.newConflictingPRs = [];
+        this.newMergeablePRs = [];
         const token = core.getInput('token', {
             required: true,
         });
@@ -513,22 +525,28 @@ class Runner {
             yield Promise.all(prs.map((pr) => pr.mergeable === enum_1.MergeableState.Conflicting
                 ? this.addMergeConflictIfNeed(pr)
                 : this.removeMergeConflictIfNeed(pr)));
+            core.setOutput('new-conflicting-prs', JSON.stringify(this.newConflictingPRs));
+            core.setOutput('new-mergeable-prs', JSON.stringify(this.newMergeablePRs));
         });
     }
     addMergeConflictIfNeed(pr) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield Promise.all([
+            const [isMergeConflictPR] = yield Promise.all([
                 this.commentService.addMergeConflictCommentIfNeed(pr),
                 this.labelService.addMergeConflictLabelIfNeed(pr),
             ]);
+            if (isMergeConflictPR)
+                this.newConflictingPRs.push(pull_request_1.PullRequestService.toOutputPR(pr));
         });
     }
     removeMergeConflictIfNeed(pr) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield Promise.all([
+            const [isNewMergeablePR] = yield Promise.all([
                 this.commentService.deleteMergeConflictCommentIfNeed(pr),
                 this.labelService.removeMergeConflictLabelIfNeed(pr),
             ]);
+            if (isNewMergeablePR)
+                this.newMergeablePRs.push(pull_request_1.PullRequestService.toOutputPR(pr));
         });
     }
 }

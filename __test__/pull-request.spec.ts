@@ -24,6 +24,10 @@ describe('PullRequestService', () => {
               {
                 id: 'prId',
                 number: 1,
+                url: '',
+                title: '',
+                headRefName: '',
+                baseRefName: '',
                 mergeable: MergeableState.Conflicting,
                 locked: false,
                 updatedAt: new Date().toUTCString(),
@@ -45,6 +49,10 @@ describe('PullRequestService', () => {
               {
                 id: 'prId',
                 number: 2,
+                url: '',
+                title: '',
+                headRefName: '',
+                baseRefName: '',
                 mergeable: MergeableState.Conflicting,
                 locked: false,
                 updatedAt: new Date().toUTCString(),
@@ -81,6 +89,10 @@ describe('PullRequestService', () => {
               {
                 id: 'prId',
                 number: 1,
+                url: '',
+                title: '',
+                headRefName: '',
+                baseRefName: '',
                 mergeable: MergeableState.Conflicting,
                 locked: true,
                 updatedAt: new Date().toUTCString(),
@@ -130,6 +142,10 @@ describe('PullRequestService', () => {
               {
                 id: 'prId',
                 number: 1,
+                url: '',
+                title: '',
+                headRefName: '',
+                baseRefName: '',
                 mergeable: MergeableState.Unknown,
                 locked: false,
                 updatedAt: new Date().toUTCString(),
@@ -152,6 +168,32 @@ describe('PullRequestService', () => {
       await expect(pullRequestService.getAllUnlockedPRs()).rejects.toThrow(
         'There is a pull request with unknown mergeable status.',
       );
+    });
+  });
+
+  describe('toOutputPR', () => {
+    test('should transformer successfully', () => {
+      const pr = {
+        id: 'prId',
+        number: 1,
+        url: 'url',
+        title: 'title',
+        headRefName: 'headRefName',
+        baseRefName: 'baseRefName',
+        mergeable: MergeableState.Conflicting,
+        locked: false,
+        updatedAt: new Date().toUTCString(),
+        comments: { nodes: [] },
+        labels: { nodes: [] },
+      };
+      expect(PullRequestService.toOutputPR(pr)).toEqual({
+        id: 'prId',
+        number: 1,
+        url: 'url',
+        title: 'title',
+        headRefName: 'headRefName',
+        baseRefName: 'baseRefName',
+      });
     });
   });
 });

@@ -15,6 +15,10 @@ export interface Label {
 export interface PullRequest {
   id: string;
   number: number;
+  title: string;
+  url: string;
+  headRefName: string;
+  baseRefName: string;
   mergeable: string;
   locked: boolean;
   updatedAt: string;
@@ -24,6 +28,15 @@ export interface PullRequest {
   labels: {
     nodes: Label[];
   };
+}
+
+export interface OutputPullRequest {
+  id: string;
+  number: number;
+  title: string;
+  url: string;
+  headRefName: string;
+  baseRefName: string;
 }
 
 export interface PageInfo {

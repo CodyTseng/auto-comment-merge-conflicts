@@ -23,6 +23,11 @@ inputs:
   label-name:
     required: false
     description: 'Label name'
+outputs:
+  new-conflicting-prs:
+    description: 'List of all new conflicting PRs (json string)'
+  new-mergeable-prs:
+    description: 'List of all new mergeable PRs (json string)'
 runs:
   using: 'node16'
   main: 'dist/index.js'
