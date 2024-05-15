@@ -32,5 +32,5 @@ outputs:
   new-mergeable-prs:
     description: 'List of all new mergeable PRs (json string)'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
