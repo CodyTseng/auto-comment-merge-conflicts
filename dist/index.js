@@ -274,10 +274,7 @@ class PullRequestService {
                     throw new Error(`Failed to get list of PRs: ${JSON.stringify(repoPRs)}`);
                 }
                 for (const pr of repoPRs.repository.pullRequests.nodes) {
-                    if (pr.mergeable === enum_1.MergeableState.Unknown) {
-                        throw new Error('There is a pull request with unknown mergeable status.');
-                    }
-                    if (this.prFilterFn(pr)) {
+                    if (pr.mergeable !== enum_1.MergeableState.Unknown && this.prFilterFn(pr)) {
                         prs.push(pr);
                     }
                 }
