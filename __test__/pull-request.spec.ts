@@ -176,7 +176,7 @@ describe('PullRequestService', () => {
       );
     });
 
-    test('should throw an error when response data has an unknown mergeable status PR', async () => {
+    test('should skip PRs with unknown mergeable state', async () => {
       const response: RepositoryPullRequests = {
         repository: {
           pullRequests: {
@@ -208,9 +208,8 @@ describe('PullRequestService', () => {
         .spyOn(queryService, 'getRepositoryPullRequests')
         .mockResolvedValue(response);
 
-      await expect(pullRequestService.getAllPRs()).rejects.toThrow(
-        'There is a pull request with unknown mergeable status.',
-      );
+      const prs = await pullRequestService.getAllPRs();
+      expect(prs).toEqual([]);
     });
   });
 
