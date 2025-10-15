@@ -34,12 +34,7 @@ export class PullRequestService {
       }
 
       for (const pr of repoPRs.repository.pullRequests.nodes) {
-        if (pr.mergeable === MergeableState.Unknown) {
-          throw new Error(
-            'There is a pull request with unknown mergeable status.',
-          );
-        }
-        if (this.prFilterFn(pr)) {
+        if (pr.mergeable !== MergeableState.Unknown && this.prFilterFn(pr)) {
           prs.push(pr);
         }
       }
